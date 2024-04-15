@@ -1,0 +1,26 @@
+#!/bin/bash
+# script to install plugg. must be run with sudo.
+
+# create /usr/local/bin if it doesn't exist
+if ! [[ -d /usr/local/bin ]] ; then
+    read -p "trying to install in /usr/local/bin but that directory doesn't exist. would you like to create it? (y/n) " response
+    if [[ "$response" == "y" ]] ; then
+	mkdir -p /usr/local/bin
+    else
+	echo "ok, exiting"
+	exit 1
+    fi    
+fi
+
+# copy files over
+DIR="$(dirname "$0")"
+cp -r $DIR /usr/local/bin/plugg-1.0
+
+# create symlink
+ln -s /usr/local/bin/plugg-1.0/plugg /usr/local/bin/plugg
+
+# create pid file
+touch /usr/local/bin/plugg-1.0/plugg.pid
+chmod 666 /usr/local/bin/plugg-1.0/plugg.pid
+
+echo "successfully installed plugg"

@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# check for sox dependency
+if ! [[ $(play --version 2>/dev/null) =~ ^.*SoX.*$ ]] ; then
+    echo "no SoX installation found, please install it"
+    exit 1
+fi
+
+DIR="$(dirname "$(readlink -f "$0")")"
+PID_FILE_NAME="plugg.pid"
+PID_FILE_PATH="$DIR/$PID_FILE_NAME"
+AUDIO_FILE_PATH="$DIR/plugg.wav"
+DEFAULT_MAX_TIME_BETWEEN_PLUGG=1800 # 30 minutes
+
+# parse arg 1
+if ! [[ -z "$1" ]] ; then
+    if [[ "$1" == "stop" ]] ; then
+	# attempt to kill existing process
+	if [[ -s $PID_FILE_PATH ]] ; then
+            echo "terminating plugg"
+            kill `cat $PID_FILE_PATH`
+	    # empty pid file
+	    cat /dev/null > $PID_FILE_PATH
+            exit 0
+	else
+            echo "could not find non-empty pid file $PID_FILE_NAME"
+            exit 1
+	fi
+    elif [[ "$1" =~ ^[0-9]+$ ]] ; then
+	range=$1
+    else
+	echo "first argument is neither 'stop' nor a number"
+        exit 1
+    fi
+else
+    range=$DEFAULT_MAX_TIME_BETWEEN_PLUGG
+fi
+
+# initial path
+if [[ "$2" != "-n" ]] ; then
+    # kill any existing plugg process first
+    if [[ -s $PID_FILE_PATH ]] ; then
+	pid=`cat $PID_FILE_PATH`
+	if [[ $(ps -p $pid -o command) =~ ^.*plugg.*$ ]] ; then
+            echo "killing existing plugg and starting a new one"
+            kill $pid
+	else
+            echo "pid in $PID_FILE_NAME doesn't identify any plugg process, something is wrong"
+	    exit 1
+	fi
+    fi
+
+    # respawn as background process
+    nohup "$0" "$range" -n >/dev/null 2>&1 &
+    echo $! >$PID_FILE_PATH
+    exit $?
+fi
+
+# respawned path: pluh
+while true ; do
+    sleep $((1 + $RANDOM % $range))
+    play $AUDIO_FILE_PATH >/dev/null 2>&1
+done
